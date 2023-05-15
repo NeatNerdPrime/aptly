@@ -1,8 +1,9 @@
-import tempfile
-import shutil
-import os
 import inspect
+import os
 import re
+import shutil
+import tempfile
+
 from lib import BaseTest
 
 
@@ -67,9 +68,6 @@ class IncludeRepo3Test(BaseTest):
     ]
     runCmd = "aptly repo include -no-remove-files -keyring=${files}/aptly.pub -repo=my-{{.Distribution} ${changes}"
     expectedCode = 1
-
-    def outputMatchPrepare(_, s):
-        return s.replace('; missing space?', '')
 
 
 class IncludeRepo4Test(BaseTest):
