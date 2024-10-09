@@ -16,14 +16,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+
+      - name: "Read go version from go.mod"
+        run: |
+          echo "GOVER=$(sed -n 's/^go \(.*\)/\1/p' go.mod)" >> $GITHUB_OUTPUT
+        id: goversion
+
+      - name: "Setup Go"
+        uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
-          cache: false
+          go-version: ${{ steps.goversion.outputs.GOVER }}
+
       - name: Create VERSION file
         run: |
           make -s version | tr -d '\n' > VERSION
         shell: sh
+
+      - name: Install and initialize swagger
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@latest
+          swag init -q --markdownFiles docs
+        shell: sh
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:

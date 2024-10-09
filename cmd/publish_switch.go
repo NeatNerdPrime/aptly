@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/aptly-dev/aptly/deb"
-	"github.com/aptly-dev/aptly/utils"
 	"github.com/smira/commander"
 	"github.com/smira/flag"
 )
@@ -14,7 +13,6 @@ func aptlyPublishSwitch(cmd *commander.Command, args []string) error {
 	var err error
 
 	components := strings.Split(context.Flags().Lookup("component").Value.String(), ",")
-	multiDist := context.Flags().Lookup("multi-dist").Value.Get().(bool)
 
 	if len(args) < len(components)+1 || len(args) > len(components)+2 {
 		cmd.Usage()
@@ -65,10 +63,6 @@ func aptlyPublishSwitch(cmd *commander.Command, args []string) error {
 	}
 
 	for i, component := range components {
-		if !utils.StrSliceHasItem(publishedComponents, component) {
-			return fmt.Errorf("unable to switch: component %s is not in published repository", component)
-		}
-
 		snapshot, err = collectionFactory.SnapshotCollection().ByName(names[i])
 		if err != nil {
 			return fmt.Errorf("unable to switch: %s", err)
@@ -101,7 +95,11 @@ func aptlyPublishSwitch(cmd *commander.Command, args []string) error {
 		published.SkipBz2 = context.Flags().Lookup("skip-bz2").Value.Get().(bool)
 	}
 
-	err = published.Publish(context.PackagePool(), context, collectionFactory, signer, context.Progress(), forceOverwrite, multiDist)
+	if context.Flags().IsSet("multi-dist") {
+		published.MultiDist = context.Flags().Lookup("multi-dist").Value.Get().(bool)
+	}
+
+	err = published.Publish(context.PackagePool(), context, collectionFactory, signer, context.Progress(), forceOverwrite)
 	if err != nil {
 		return fmt.Errorf("unable to publish: %s", err)
 	}

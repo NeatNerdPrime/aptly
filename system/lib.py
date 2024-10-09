@@ -103,7 +103,7 @@ class DotFinder(object):
     def find_dot(self, executables):
         for executable in executables:
             try:
-                subprocess.check_output([executable, "-V"], text=True)
+                subprocess.check_output([executable, "-V"], text=True, stderr=subprocess.DEVNULL)
                 return executable
             except Exception:
                 pass
@@ -267,7 +267,7 @@ class BaseTest(object):
             self.webServerUrl = self.start_webserver(os.path.join(os.path.dirname(inspect.getsourcefile(self.__class__)),
                                                                   self.fixtureWebServer))
 
-        if self.requiresGPG2:
+        if self.requiresGPG2 or self.gpgFinder.gpg2:
             self.run_cmd([
                 self.gpgFinder.gpg2, "--import",
                 os.path.join(os.path.dirname(inspect.getsourcefile(BaseTest)), "files") + "/aptly.sec"], expected_code=None)
@@ -275,6 +275,7 @@ class BaseTest(object):
         if self.fixtureGpg:
             self.run_cmd([self.gpgFinder.gpg, "--no-default-keyring", "--trust-model", "always", "--batch", "--keyring", "aptlytest.gpg", "--import"] +
                          [os.path.join(os.path.dirname(inspect.getsourcefile(BaseTest)), "files", key) for key in self.fixtureGpgKeys])
+            self.run_cmd(["chmod", "400", os.path.join(os.environ["HOME"], ".gnupg/aptlytest.gpg")])
 
         if hasattr(self, "fixtureCmds"):
             for cmd in self.fixtureCmds:

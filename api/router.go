@@ -11,6 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
+
+	_ "github.com/aptly-dev/aptly/docs" // import docs
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 var context *ctx.AptlyContext
@@ -22,7 +26,27 @@ func apiMetricsGet() gin.HandlerFunc {
 	}
 }
 
+func redirectSwagger(c *gin.Context) {
+	if c.Request.URL.Path == "/docs/" {
+		c.Redirect(http.StatusMovedPermanently, "/docs/index.html")
+		return
+	}
+	c.Next()
+}
+
 // Router returns prebuilt with routes http.Handler
+// @title           Aptly API
+// @version         1.0
+// @description     Aptly REST API Documentation
+
+// @contact.name   Aptly
+// @contact.url    http://github.com/aptly-dev/aptly
+// @contact.email  support@aptly.info
+
+// @license.name  MIT License
+// @license.url   http://www.
+
+// @BasePath  /api
 func Router(c *ctx.AptlyContext) http.Handler {
 	if aptly.EnableDebug {
 		gin.SetMode(gin.DebugMode)
@@ -47,6 +71,12 @@ func Router(c *ctx.AptlyContext) http.Handler {
 	}
 
 	router.Use(gin.Recovery(), gin.ErrorLogger())
+
+	if c.Config().EnableSwaggerEndpoint {
+		router.Use(redirectSwagger)
+		url := ginSwagger.URL("/docs/doc.json")
+		router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+	}
 
 	if c.Config().EnableMetricsEndpoint {
 		MetricsCollectorRegistrar.Register(router)
@@ -95,6 +125,7 @@ func Router(c *ctx.AptlyContext) http.Handler {
 			api.GET("/metrics", apiMetricsGet())
 		}
 		api.GET("/version", apiVersion)
+		api.GET("/storage", apiDiskFree)
 
 		isReady := &atomic.Value{}
 		isReady.Store(false)
@@ -154,6 +185,7 @@ func Router(c *ctx.AptlyContext) http.Handler {
 	}
 
 	{
+
 		api.GET("/publish", apiPublishList)
 		api.POST("/publish", apiPublishRepoOrSnapshot)
 		api.POST("/publish/:prefix", apiPublishRepoOrSnapshot)
@@ -169,7 +201,8 @@ func Router(c *ctx.AptlyContext) http.Handler {
 		api.GET("/snapshots/:name/packages", apiSnapshotsSearchPackages)
 		api.DELETE("/snapshots/:name", apiSnapshotsDrop)
 		api.GET("/snapshots/:name/diff/:withSnapshot", apiSnapshotsDiff)
-		api.POST("/snapshots/merge", apiSnapshotsMerge)
+		api.POST("/snapshots/:name/merge", apiSnapshotsMerge)
+		api.POST("/snapshots/:name/pull", apiSnapshotsPull)
 	}
 
 	{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ConfigStructure is structure of main configuration
@@ -41,6 +42,7 @@ type ConfigStructure struct { // nolint: maligned
 	LogFormat              string                           `json:"logFormat"`
 	ServeInAPIMode         bool                             `json:"serveInAPIMode"`
 	DatabaseBackend        DBConfig                         `json:"databaseBackend"`
+	EnableSwaggerEndpoint  bool                             `json:"enableSwaggerEndpoint"`
 }
 
 // DBConfig
@@ -179,6 +181,7 @@ var Config = ConfigStructure{
 	LogLevel:               "debug",
 	LogFormat:              "default",
 	ServeInAPIMode:         false,
+	EnableSwaggerEndpoint:  false,
 }
 
 // LoadConfig loads configuration from json file
@@ -208,4 +211,9 @@ func SaveConfig(filename string, config *ConfigStructure) error {
 
 	_, err = f.Write(encoded)
 	return err
+}
+
+// GetRootDir returns the RootDir with expanded ~ as home directory
+func (conf *ConfigStructure) GetRootDir() string {
+	return strings.Replace(conf.RootDir, "~", os.Getenv("HOME"), 1)
 }

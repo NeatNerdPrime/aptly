@@ -424,15 +424,22 @@ class PublishSwitch11Test(BaseTest):
 
 class PublishSwitch12Test(BaseTest):
     """
-    publish switch: wrong component names
+    publish switch: add new component to publish
     """
     fixtureCmds = [
         "aptly snapshot create snap1 empty",
         "aptly snapshot create snap2 empty",
+        "aptly snapshot create snap3 empty",
         "aptly publish snapshot -architectures=i386 -keyring=${files}/aptly.pub -secret-keyring=${files}/aptly.sec -distribution=maverick -component=a,b snap1 snap2",
     ]
-    runCmd = "aptly publish switch -keyring=${files}/aptly.pub -secret-keyring=${files}/aptly.sec -component=a,c maverick snap2 snap1"
-    expectedCode = 1
+    runCmd = "aptly publish switch -keyring=${files}/aptly.pub -secret-keyring=${files}/aptly.sec -component=a,c maverick snap2 snap3"
+    gold_processor = BaseTest.expand_environ
+
+    def check(self):
+        super(PublishSwitch12Test, self).check()
+
+        self.check_exists('public/dists/maverick/a/binary-i386/Packages')
+        self.check_exists('public/dists/maverick/c/binary-i386/Packages')
 
 
 class PublishSwitch13Test(BaseTest):
@@ -574,3 +581,32 @@ class PublishSwitch15Test(BaseTest):
         self.check_exists('public/dists/maverick/main/binary-amd64/Packages')
         self.check_exists('public/dists/maverick/main/binary-amd64/Packages.gz')
         self.check_not_exists('public/dists/maverick/main/binary-amd64/Packages.bz2')
+
+
+class PublishSwitch16Test(BaseTest):
+    """
+    publish switch: -multi-dist
+    """
+    fixtureDB = True
+    fixturePool = True
+    fixtureCmds = [
+        "aptly snapshot create snap1 from mirror gnuplot-maverick",
+        "aptly snapshot create snap2 empty",
+        "aptly snapshot pull -no-deps -architectures=i386,amd64 snap2 snap1 snap3 gnuplot-x11",
+        "aptly publish snapshot -keyring=${files}/aptly.pub -secret-keyring=${files}/aptly.sec -distribution=bookworm snap1",
+    ]
+    runCmd = "aptly publish switch -keyring=${files}/aptly.pub -secret-keyring=${files}/aptly.sec -multi-dist bookworm snap3"
+    gold_processor = BaseTest.expand_environ
+
+    def check(self):
+        super(PublishSwitch16Test, self).check()
+
+        self.check_exists('public/dists/bookworm/Release')
+
+        self.check_exists('public/dists/bookworm/main/binary-i386/Packages')
+        self.check_exists('public/dists/bookworm/main/binary-i386/Packages.gz')
+
+        self.check_exists('public/dists/bookworm/main/binary-amd64/Packages')
+        self.check_exists('public/dists/bookworm/main/binary-amd64/Packages.gz')
+
+        self.check_exists('public/pool/bookworm/main/g/gnuplot/gnuplot-x11_4.6.1-1~maverick2_amd64.deb')
